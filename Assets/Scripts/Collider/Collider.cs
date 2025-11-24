@@ -9,6 +9,13 @@ public struct Projection
         this.max = max;
         this.min = min;
     }
+
+    // 투영한 그림자가 겹치는지 여부 반환  
+    public bool Overlaps(Projection other)
+    {
+        // 내 최대값이 상대 최소값보다 작거나, 내 최소값이 상대 최대값보다 작으면 겹치지 않음
+        return !(this.max < other.min || other.max < this.min);
+    }
 }
 
 public abstract class Collider : MonoBehaviour
@@ -52,7 +59,7 @@ public abstract class Collider : MonoBehaviour
     // last 변수 갱신용
     protected abstract void UpdateCache();
 
-    protected  Projection Project(Vector2 axis)
+    public  Projection Project(Vector2 axis)
     {
         Vector2[] vertices = GetVertices();
 
