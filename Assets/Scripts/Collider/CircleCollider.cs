@@ -25,4 +25,23 @@ public class CircleCollider : Collider
 
         return new Projection(centerProjection - scaledRadius, centerProjection + scaledRadius);
     }
+
+    protected override void OnDrawGizmos()
+    {
+        // 부모의 기능은 무시하고 재정의
+        
+        
+        Gizmos.color = Color.green;
+
+        // 1. 월드 좌표계에서 중심 계산
+        // transform.position + (회전 * 오프셋)
+        Vector2 worldCenter = (Vector2)transform.position + (Vector2)(transform.rotation * offset);
+
+        // 2. 실제 월드상의 반지름 계산 (가장 긴 축을 기준)
+        float currentScale = Mathf.Max(transform.lossyScale.x, transform.lossyScale.y) * radius;
+        float finalRadius = currentScale * radius;
+
+        // 3. 원 그리기
+        Gizmos.DrawWireSphere(worldCenter, finalRadius);
+    }
 }

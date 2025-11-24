@@ -31,7 +31,11 @@ public static class CollisionManager
             Projection p1 = a.Project(axis);
             Projection p2 = b.Project(axis);
 
-            if(!p1.Overlaps(p2)) return false; // 분리 축 발견
+            if(!p1.Overlaps(p2))
+            {
+                Debug.Log($"분리 축 발견! Axis: {axis}, P1: {p1.min}~{p1.max}, P2: {p2.min}~{p2.max}");
+                return false; // 분리 축 발견
+            }
         }
 
         return true;

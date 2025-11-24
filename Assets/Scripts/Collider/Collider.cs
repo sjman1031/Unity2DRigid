@@ -2,12 +2,13 @@ using UnityEngine;
 
 public struct Projection
 {
-    public float max;
     public float min;
-    public Projection(float max, float min)
+    public float max;
+
+    public Projection(float min, float max)
     {
-        this.max = max;
         this.min = min;
+        this.max = max;
     }
 
     // 투영한 그림자가 겹치는지 여부 반환  
@@ -27,9 +28,14 @@ public abstract class Collider : MonoBehaviour
 
     protected virtual void Awake()
     {
-        lastPosition = transform.position;
-        lastRotation = transform.rotation;
-        lastScale = transform.lossyScale;
+        // 초기화 시점에 말도 안되는 값으로 설정
+        // -> 처음 IsDirty 호출 시 무조건 true 반환
+        lastPosition = Vector3.negativeInfinity;
+        lastRotation = Quaternion.identity;
+        lastScale = Vector3.negativeInfinity;
+
+        // 이후 캐시를 업데이트
+        UpdateCache();
     }
 
     /// <summary>
@@ -66,9 +72,9 @@ public abstract class Collider : MonoBehaviour
         float min = float.MaxValue;
         float max = float.MinValue; 
 
-        for(int i = 0; i < vertices.Length; i++)
+        foreach (var v in vertices)
         {
-            float p = Vector2.Dot(vertices[i], axis);
+            float p = Vector2.Dot(v, axis);
             if (p < min) min = p;
             if (p > max) max = p;
         }
@@ -76,7 +82,7 @@ public abstract class Collider : MonoBehaviour
         return new Projection(min, max);
     }
 
-    private void OnDrawGizmos()
+    protected virtual void OnDrawGizmos()
     {
         // 1. 꼭짓점 가져오기
         Vector2[] vertices = GetVertices();
