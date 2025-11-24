@@ -75,4 +75,21 @@ public abstract class Collider : MonoBehaviour
 
         return new Projection(min, max);
     }
+
+    private void OnDrawGizmos()
+    {
+        // 1. 꼭짓점 가져오기
+        Vector2[] vertices = GetVertices();
+        if (vertices == null || vertices.Length == 0) return;
+
+        Gizmos.color = Color.green;
+
+        // 2. 선 그리기
+        for (int i = 0; i < vertices.Length; i++)
+        {
+            Vector2 current = vertices[i];
+            Vector2 next = vertices[(i + 1) % vertices.Length];
+            Gizmos.DrawLine(current, next);
+        }
+    }
 }
