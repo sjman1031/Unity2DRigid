@@ -21,9 +21,10 @@ public class  CollisionTest : MonoBehaviour
         {
             SetColor(Color.red);
         }
-        
         else
-            SetColor(Color.white);
+        {
+            SetColor(Color.white); 
+        }
     }
 
     private void SetColor(Color color)

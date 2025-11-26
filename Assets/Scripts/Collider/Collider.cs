@@ -21,6 +21,9 @@ public struct Projection
 
 public abstract class Collider : MonoBehaviour
 {
+    // Trigger 용 변수 
+    public bool isTrigger = false;
+
     // 변경 감지용 변수 
     protected Vector3 lastPosition;
     protected Quaternion lastRotation;
