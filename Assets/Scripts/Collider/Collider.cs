@@ -65,7 +65,7 @@ public abstract class Collider : MonoBehaviour
     // last 변수 갱신용
     protected abstract void UpdateCache();
 
-    public  Projection Project(Vector2 axis)
+    public virtual Projection Project(Vector2 axis)
     {
         Vector2[] vertices = GetVertices();
 

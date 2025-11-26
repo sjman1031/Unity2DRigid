@@ -17,14 +17,18 @@ public class CircleCollider : Collider
     // 캐싱할게 따로 없어서 구현 생략
     protected override void UpdateCache() { } 
 
-    public new Projection Project(Vector2 axis)
+    public override Projection Project(Vector2 axis)
     {
-        float centerProjection = Vector2.Dot(WorldCenter, axis);
-        // 스케일이 적용된 반지름 계산 (x, y 중 큰 스케일 적용)
-        float scaledRadius = radius * Mathf.Max(transform.lossyScale.x, transform.lossyScale.y);
+        Vector2 worldCenter = (Vector2)transform.position + (Vector2)(transform.rotation * offset);
+
+        float centerProjection = Vector2.Dot(worldCenter, axis);
+
+        float currentScale = Mathf.Max(transform.lossyScale.x, transform.lossyScale.y);
+        float scaledRadius = radius * currentScale;
 
         return new Projection(centerProjection - scaledRadius, centerProjection + scaledRadius);
     }
+
 
     protected override void OnDrawGizmos()
     {
