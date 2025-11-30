@@ -43,7 +43,7 @@ public class PhysicsManager : MonoBehaviour
 
                 if (!a.gameObject.activeInHierarchy || !b.gameObject.activeInHierarchy) continue;
 
-                
+                CollisionResult result = CollisionManager.CheckCollision(a, b); 
             }
         }
     }

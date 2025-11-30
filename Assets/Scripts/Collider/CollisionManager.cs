@@ -2,13 +2,13 @@ using UnityEngine;
 
 public static class CollisionManager
 {
-    public static bool CheckCollision(Collider a, Collider b)
+    public static CollisionResult CheckCollision(Collider a, Collider b)
     {
-        // 1. 원이 포함된 경우의 처리
-        if (a is CircleCollider || b is CircleCollider)
-            return CheckCircleCollision(a, b);
+        // 1. 원 - 원 충돌 검사
+        if (a is CircleCollider && b is CircleCollider)
+            return CheckCircleCircleCollision((CircleCollider)a, (CircleCollider)b);
 
-        // 2. 다각형 vs 다각형 (Box vs Box, Box vs Polygon, Polygon vs Polygon)
+        // 2. 그 외 모든 경우에는 SAT 이용
         return CheckSATCollision(a, b);
     }
 
@@ -39,6 +39,34 @@ public static class CollisionManager
         }
 
         return true;
+    }
+
+    private static CollisionResult CheckCircleCircleCollision(CircleCollider a, CircleCollider b)
+    {
+        Vector2 dir = a.WorldCenter - b.WorldCenter;
+        float distSq = dir.sqrMagnitude; // 거리의 제곱 (성능 최적화 용)
+
+        // 스케일을 고려한 반지름 계산
+        float radiusA = a.radius * Mathf.Max(a.transform.lossyScale.x, a.transform.lossyScale.y);
+        float radiusB = b.radius * Mathf.Max(b.transform.lossyScale.x, b.transform.lossyScale.y);
+        float radiusSum = radiusA + radiusB;
+
+        // 충돌 안함
+        if (distSq > radiusSum * radiusSum)
+        {
+            return CollisionResult.NoCollision(); // 충돌 없음
+        }
+
+        // 충돌 계산 -> MTV 계산
+        float dist = Mathf.Sqrt(distSq);
+
+        // 거리가 0이면 임의의 방향으로 밀어냄
+        if (dist == 0f) dist = 0.001f;
+
+        float overlap = radiusSum - dist;
+        Vector2 normal = dir / dist; // B -> A 방향의 단위 벡터
+
+        return CollisionResult.Collided(normal, overlap);
     }
 
     public static bool CheckCircleCollision(Collider a, Collider b)
