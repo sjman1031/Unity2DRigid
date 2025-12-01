@@ -12,35 +12,6 @@ public static class CollisionManager
         return CheckSATCollision(a, b);
     }
 
-    // 다각형 간 SAT 충돌 검사
-    public static bool CheckSATCollision(Collider a, Collider b)
-    {
-        // A의 축 검사
-        if (!CheckAxes(a.GetAxes(), a, b)) return false;
-
-        // B의 축 검사
-        if (!CheckAxes(b.GetAxes(), a, b)) return false;
-        
-        return true; // 모든 축에서 겹침 
-    }
-
-    public static bool CheckAxes(Vector2[] axes, Collider a, Collider b)
-    {
-        foreach (var axis in axes)
-        {
-            Projection p1 = a.Project(axis);
-            Projection p2 = b.Project(axis);
-
-            if(!p1.Overlaps(p2))
-            {
-                Debug.Log($"분리 축 발견! Axis: {axis}, P1: {p1.min}~{p1.max}, P2: {p2.min}~{p2.max}");
-                return false; // 분리 축 발견
-            }
-        }
-
-        return true;
-    }
-
     private static CollisionResult CheckCircleCircleCollision(CircleCollider a, CircleCollider b)
     {
         Vector2 dir = a.WorldCenter - b.WorldCenter;
@@ -69,36 +40,80 @@ public static class CollisionManager
         return CollisionResult.Collided(normal, overlap);
     }
 
-    public static bool CheckCircleCollision(Collider a, Collider b)
+    private static CollisionResult CheckSATCollision(Collider a, Collider b)
     {
-        // 둘 다 원인 경우
-        if (a is CircleCollider c1 && b is CircleCollider c2)
+        float minOverlap = float.MaxValue; // 최소 겹침 길이 
+        Vector2 smallestAxis = Vector2.zero; // 그때의 축
+
+        // 1. A의 축 검사
+        if(!TryCheckAxes(a.GetAxes(), a, b, ref minOverlap, ref smallestAxis))
+            return CollisionResult.NoCollision(); // 분리축 발견 -> 충돌 없음
+
+        // 2. B의 축 검사
+        if(!TryCheckAxes(b.GetAxes(), a, b, ref minOverlap, ref smallestAxis))
+            return CollisionResult.NoCollision(); // 분리축 발견 -> 충돌 없음
+
+        // 3. 둘 중 하나가 원이라면 동적 축 추가 검사
+        // (원의 중심과 가장 가까운 꼭짓점을 잇는 축)
+        if(a is CircleCollider || b is CircleCollider)
         {
-            float distSq = (c1.WorldCenter - c2.WorldCenter).sqrMagnitude;
+            CircleCollider circle = (a is CircleCollider) ? (CircleCollider)a : (CircleCollider)b;
+            Collider polygon = (a is CircleCollider) ? b : a;
 
-            // x와 y의 스케일 중 더 큰값을 반지름에 적용
-            float r1 = c1.radius * Mathf.Max(c1.transform.lossyScale.x, c1.transform.lossyScale.y);
-            float r2 = c2.radius * Mathf.Max(c2.transform.lossyScale.x, c2.transform.lossyScale.y);
+            // 다각형에서 원에 가장 가까운 꼭짓점 찾기
+            Vector2 closestVertex = GetClosestVertex(polygon.GetVertices(), circle.WorldCenter);
+            Vector2 axis = (circle.WorldCenter - closestVertex).normalized; 
 
-            float radiusSum = r1 + r2;
-            return distSq < radiusSum * radiusSum;
+            // 이 축으로 다시 검사
+            // 축이 영벡터 -> 중심이 꼭짓점과 겹치면 생략
+            if(axis != Vector2.zero)
+            {
+                if(!TryCheckOneAxis(axis, a, b, ref minOverlap, ref smallestAxis))
+                    return CollisionResult.NoCollision(); // 분리축 발견 -> 충돌 없음
+            }
         }
 
-        // 하나만 원 인 경우
-        CircleCollider circle = (a is CircleCollider) ? (CircleCollider)a : (CircleCollider)b;
-        Collider polygon = (a is CircleCollider) ? b : a;
+        // 4. 방향 보정 (MTV는 항상 A에서 B를 향하는 방향이나 반대로 통일)
+        // A -> B 벡터와 MTV 벡터의 내적이 음수면, MTV가 반대라는 뜻이므로 뒤집음
+        Vector2 centerDir = b.transform.position - a.transform.position;
+        if(Vector2.Dot(centerDir, smallestAxis) < 0)
+            smallestAxis = -smallestAxis;
 
-        // 1. 다각형의 축 검사
-        if (!CheckAxes(polygon.GetAxes(), polygon, circle)) return false;
+        return CollisionResult.Collided(smallestAxis, minOverlap);
+    }
 
-        // 2. 원 중심 -> 가장 가까운 꼭짓점 축 검사
-        Vector2 closest = GetClosestVertex(polygon.GetVertices(), circle.WorldCenter);
-        Vector2 axis = (closest - circle.WorldCenter).normalized;
+    // 축 목록을 순회하면서 검사
+    private static bool TryCheckAxes(Vector2[] axes, Collider a, Collider b, ref float minOverlap, ref Vector2 smallestAxis)
+    {
+        if (axes == null) return true; // 검사할 축이 없음 = 원 -> 패스
 
-        Projection pPolygon = polygon.Project(axis);
-        Projection pCircle = circle.Project(axis);
+        foreach (var axis in axes)
+        {
+            if(!TryCheckOneAxis(axis, a, b, ref minOverlap, ref smallestAxis))
+                return false; // 분리축 발견 -> 충돌 없음
+        }
 
-        return pPolygon.Overlaps(pCircle);
+        return true;
+    }
+
+    // 단일 축 검사
+    private static bool TryCheckOneAxis(Vector2 axis, Collider a, Collider b, ref float minOverlap, ref Vector2 smallestAxis)
+    {
+        Projection p1 = a.Project(axis);
+        Projection p2 = b.Project(axis);
+
+        float overlap = p1.GetOverlap(p2);
+
+        if (overlap <= 0) return false; // 분리축 발견 -> 충돌 없음
+
+        // 가장 작은 겹침(MTV 후보) 갱신
+        if(overlap < minOverlap)
+        {
+            minOverlap = overlap;
+            smallestAxis = axis;
+        }
+
+        return true;
     }
 
     public static Vector2 GetClosestVertex(Vector2[] vertices, Vector2 center)

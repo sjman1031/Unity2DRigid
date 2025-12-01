@@ -17,6 +17,14 @@ public struct Projection
         // 내 최대값이 상대 최소값보다 작거나, 내 최소값이 상대 최대값보다 작으면 겹치지 않음
         return !(this.max < other.min || other.max < this.min);
     }
+
+    // 겹치는 길이 반환(안 겹치면 0 이하 값 반환)
+    public float GetOverlap(Projection other)
+    {
+        // 두 구간이 겹치는 길이 계산
+        // Math.Min(끝끼리 비교) - Math.Max(시작끼리 비교)
+        return Mathf.Min(this.max, other.max) - Mathf.Max(this.min, other.min);
+    }
 }
 
 public abstract class Collider : MonoBehaviour
